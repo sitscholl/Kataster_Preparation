@@ -2,8 +2,6 @@ in_data: '../Wiesen.gpkg'
 out_data: '../Wiesen_test.gpkg' #put same path as in_data and overwrite to true to update existing layers
 overwrite: true
 max_join_distance: 1
-save_naturamon_json: true
-out_naturamon: ../Naturamon/
 
 reihennummer_name: Reihe
 wiesen_name: Wiese
@@ -25,3 +23,7 @@ layers:
     layer_name: Baeume
     type: join_layer
     required_columns: ['reihennummer_name', 'baumnummer_name']
+
+naturamon:
+  in_data: '../Wiesen_test.gpkg'
+  out_data: ../Naturamon/

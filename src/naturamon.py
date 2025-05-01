@@ -1,18 +1,26 @@
 from datetime import datetime
 from collections import defaultdict
 
-def create_naturamon_json(geojson_data, parcel_id, parcel_name, reihennummer_name, baumnummer_name):
+
+def create_naturamon_json(
+    baum_data,
+    parcel_id: int,
+    parcel_name: str,
+    reihennummer_name: str,
+    baumnummer_name: str,
+    pillars_data = None,
+):
     """
     Script to transform GeoJSON tree data into a JSON structure suitable for database insertion in naturamon.
     The GeoJSON tree data needs to correspond to a point layer, where each point represents a tree and has the
     following two attributes: 'reihennummer_name' (row number) and 'baumnummer_name' (tree number).
-    No coordinate transformation or checks are done, therefore make sure that the GeoJSON has the EPSG:4326 coordinate system, 
+    No coordinate transformation or checks are done, therefore make sure that the GeoJSON has the EPSG:4326 coordinate system,
     otherwise the output coordinates will not be suitable for database insertion.
     """
 
     # Group trees by row number
     trees_by_row = defaultdict(list)
-    for feature in geojson_data['features']:
+    for feature in baum_data['features']:
         row_num = feature['properties'][reihennummer_name]
         trees_by_row[row_num].append(feature)
 
@@ -61,7 +69,7 @@ def create_naturamon_json(geojson_data, parcel_id, parcel_name, reihennummer_nam
         })
         row_id = current_id
         current_id += 1
-        
+
         # Add trees for this row
         for tree in sorted(trees_by_row[row_num], key=lambda x: x['properties'][baumnummer_name]):
             coords = tree['geometry']['coordinates']
@@ -83,6 +91,7 @@ def create_naturamon_json(geojson_data, parcel_id, parcel_name, reihennummer_nam
             current_id += 1
 
     return result
+
 
 # # Save the result
 # with open('transformed_dietl_baume.json', 'w') as f:

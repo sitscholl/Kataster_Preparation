@@ -8,7 +8,8 @@ from .geometry_checks import convert_multipoint_to_point
 logger = logging.getLogger(__name__)
 
 class DataLoader:
-    def __init__(self, config):
+    def __init__(self, in_data, config):
+        self.in_data = in_data
         self.config = config
         self.base_layer = None
         self.join_layers = {}
@@ -28,7 +29,7 @@ class DataLoader:
         layer_name = layer_config['layer_name']
         layer_type = layer_config['type']
 
-        gdf = gpd.read_file(self.config['in_data'], layer=layer_name)
+        gdf = gpd.read_file(self.in_data, layer=layer_name)
         gdf = self._add_missing_columns(
             gdf,
             layer_config['required_columns'],
