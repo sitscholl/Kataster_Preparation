@@ -2,8 +2,11 @@ in_data: '../Wiesen.gpkg'
 out_data: '../Wiesen_test.gpkg' #put same path as in_data and overwrite to true to update existing layers
 overwrite: true
 max_join_distance: 1
+save_naturamon_json: true
+out_naturamon: ../Naturamon/
 
 reihennummer_name: Reihe
+wiesen_name: Wiese
 baumnummer_name: Baum
 säulennummer_name: Säule
 
@@ -11,7 +14,7 @@ layers:
   fruchtdraht:
     layer_name: Fruchtdraht #the name of the layer in the geopackage
     type: base_layer
-    required_columns: ['reihennummer_name'] #list of required columns. Use the keys here, column names are specified using the same key below
+    required_columns: ['reihennummer_name', wiesen_name] #list of required columns. Use the keys here, column names are specified using the same key below
 
   gerüst:
     layer_name: Geruest
