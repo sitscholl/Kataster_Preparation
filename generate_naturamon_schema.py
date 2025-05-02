@@ -15,29 +15,29 @@ wiese_name = config['wiesen_name']
 
 loader = DataLoader(in_data = config['naturamon']['in_data'], config = config)
 loader.load_layer('bäume')
-numbered_layer = loader.join_layers['bäume']
+loader.load_layer('gerüst')
 
 parcel_id = 1
-for parcel_name, parcel_baume in numbered_layer.groupby(wiese_name):
+for parcel_name, parcel_trees in loader.join_layers['bäume'].groupby(wiese_name):
 
-    if parcel_baume[config['reihennummer_name']].isna().any():
+    parcel_pillars = loader.join_layers['gerüst']
+    parcel_pillars = parcel_pillars.loc[parcel_pillars[wiese_name] == parcel_name].dropna(subset = config['säulennummer_name'])
+
+    if parcel_trees[config['reihennummer_name']].isna().any():
         logger.warning(f"Missing values in column {config['reihennummer_name']} for parcel {parcel_name}. Json generation is skipped")
         continue
-    if parcel_baume[config['baumnummer_name']].isna().any():
+    if parcel_trees[config['baumnummer_name']].isna().any():
         logger.warning(f"Missing values in column {config['baumnummer_name']} for parcel {parcel_name}. Json generation is skipped")
         continue
 
-    geojson_data = json.loads(parcel_baume.to_json(
-        to_wgs84=True,  # converts to WGS84 CRS
-        drop_id=True    # don't include the index as an id property
-    ))
-
     naturamon_json = create_naturamon_json(
-        geojson_data,
+        parcel_trees,
         parcel_id,
         parcel_name,
         reihennummer_name = config['reihennummer_name'],
         baumnummer_name = config['baumnummer_name'],
+        parcel_pillars = parcel_pillars,
+        säulennummer_name=config['säulennummer_name']
     )
 
     # Save the result

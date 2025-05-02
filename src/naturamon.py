@@ -1,14 +1,45 @@
 from datetime import datetime
 from collections import defaultdict
+import json
+from geopandas import GeoDataFrame
+# from pydantic import BaseModel
 
+# JSON_STRUCTURE_BASE = {
+#         "ID": None,
+#         "Class": None,
+#         "Number": None,
+#         "ClassNumber": None,
+#         "ParentID": None,
+#         "BaseID": None,
+#         "Name": None,
+#         "PrevObjDistance": 0.0,
+#         "Coordinates": None,
+#         "IsAnchor": 0,
+#         "Created": None,
+#         "LastModified": None,
+#         "Deleted": 0
+# }
+
+def _group_by_row(json, entryname):
+    data_by_row = defaultdict(list)
+    for feature in json['features']:
+        row_num = feature['properties'][entryname]
+        data_by_row[row_num].append(feature)
+    return data_by_row
+
+def _to_json(gdf):
+    return json.loads(gdf.to_json(
+        to_wgs84=True,  # converts to WGS84 CRS
+        drop_id=True    # don't include the index as an id property
+    ))
 
 def create_naturamon_json(
-    baum_data,
+    parcel_trees: GeoDataFrame,
     parcel_id: int,
     parcel_name: str,
     reihennummer_name: str,
     baumnummer_name: str,
-    pillars_data = None,
+    parcel_pillars: GeoDataFrame | None = None,
     säulennummer_name: str = None
 ):
     """
@@ -19,17 +50,15 @@ def create_naturamon_json(
     otherwise the output coordinates will not be suitable for database insertion.
     """
 
-    # Group trees by row number
-    trees_by_row = defaultdict(list)
-    for feature in baum_data['features']:
-        row_num = feature['properties'][reihennummer_name]
-        trees_by_row[row_num].append(feature)
+    parcel_trees = _to_json(parcel_trees)
+    if parcel_pillars is not None:
+        parcel_pillars = _to_json(parcel_pillars)
 
-    if pillars_data:
-        pillars_by_row = defaultdict(list)
-        for feature in pillars_data['features']:
-            pillar_num= feature['properties']['säulennummer_name']
-            pillars_by_row[pillar_num].append(feature)
+    # Group entities by row number
+    trees_by_row = _group_by_row(parcel_trees, reihennummer_name)
+    pillars_by_row = None
+    if parcel_pillars is not None:
+        pillars_by_row = _group_by_row(parcel_pillars, reihennummer_name)
 
     # Initialize the result list with the parcel
     current_timestamp = int(datetime.now().timestamp() * 1000)
@@ -95,25 +124,27 @@ def create_naturamon_json(
                 "LastModified": current_timestamp,
                 "Deleted": 0
             })
+            current_id += 1
 
         #Add pillars for this row
-        for pillar in sorted(pillars_by_row[row_num], key=lambda x: x['properties'][säulennummer_name]):
-            coords = pillar['geometry']['coordinates']
-            result.append({
-                "ID": current_id,
-                "Class": "pillar",
-                "Number": pillar['properties'][säulennummer_name],
-                "ClassNumber": pillar['properties'][säulennummer_name],
-                "ParentID": row_id,
-                "BaseID": base_id,
-                "Name": None,
-                "PrevObjDistance": 0.0,
-                "Coordinates": f"POINT({coords[0]} {coords[1]})",
-                "IsAnchor": 0,
-                "Created": f"{created_date}T06:51:10",
-                "LastModified": current_timestamp,
-                "Deleted": 0
-            })
+        if pillars_by_row is not None:
+            for pillar in sorted(pillars_by_row[row_num], key=lambda x: x['properties'][säulennummer_name]):
+                coords = pillar['geometry']['coordinates']
+                result.append({
+                    "ID": current_id,
+                    "Class": "pillar",
+                    "Number": pillar['properties'][säulennummer_name],
+                    "ClassNumber": pillar['properties'][säulennummer_name],
+                    "ParentID": row_id,
+                    "BaseID": base_id,
+                    "Name": None,
+                    "PrevObjDistance": 0.0,
+                    "Coordinates": f"POINT({coords[0]} {coords[1]})",
+                    "IsAnchor": 0,
+                    "Created": f"{created_date}T06:51:10",
+                    "LastModified": current_timestamp,
+                    "Deleted": 0
+                })
             current_id += 1
 
     return result
