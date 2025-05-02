@@ -2,23 +2,83 @@ from datetime import datetime
 from collections import defaultdict
 import json
 from geopandas import GeoDataFrame
-# from pydantic import BaseModel
+from typing import ClassVar
+from pydantic import BaseModel
 
-# JSON_STRUCTURE_BASE = {
-#         "ID": None,
-#         "Class": None,
-#         "Number": None,
-#         "ClassNumber": None,
-#         "ParentID": None,
-#         "BaseID": None,
-#         "Name": None,
-#         "PrevObjDistance": 0.0,
-#         "Coordinates": None,
-#         "IsAnchor": 0,
-#         "Created": None,
-#         "LastModified": None,
-#         "Deleted": 0
-# }
+class Entity(BaseModel):
+    _counter: ClassVar[int] = 0  # Class variable to keep track of IDs
+
+    ID: int
+    Class: str
+    Number: int
+    ClassNumber: int
+    ParentID: int | None
+    BaseID: int | None
+    Name: str | None = None
+    PrevObjDistance: float = 0.0
+    Coordinates: str | None = None
+    IsAnchor: int = 0
+    Created: str = datetime.now().strftime("%Y-%m-%dTT%H:%M:%S")
+    LastModified: float = int(datetime.now().timestamp() * 1000)
+    Deleted: int = 0
+
+    _rows: dict = defaultdict(list)
+
+    def __init__(self, **data):
+        Entity._counter += 1  # Increment the counter
+        if 'ID' not in data:  # Only set id if not provided
+            data['ID'] = Entity._counter
+        super().__init__(**data)
+
+    def add_row(self, row_num):
+        self._rows[row_num].append(
+            Entity(
+                Class="row",
+                Number=row_num,
+                ClassNumber=0,
+                ParentID=self.ID,
+                BaseID=self.ID,
+            )
+        )
+
+    def add_points(self, points, row_num, num_name, class_name):
+        if row_num not in self._rows.keys():
+            raise ValueError("Row number not found in _rows. Initialize row first before adding trees.")
+
+        for feature in points:
+            coords = feature['geometry']['coordinates']
+            self._rows[row_num].append(
+                Entity(
+                    Class=class_name,
+                    Number=feature['properties'][num_name],
+                    ClassNumber=feature['properties'][num_name],
+                    ParentID=row_num,
+                    BaseID=self.ID,
+                    Coordinates=f"POINT({coords[0]} {coords[1]})",
+                    IsAnchor=1 if feature['properties'][num_name] == 1 else 0
+                )
+            )
+
+    def get_row(self, row_num):
+        if row_num not in self._rows.keys():
+            raise ValueError("Row number not found in _rows. Initialize row first.")
+
+        row = self._rows[row_num]
+        n_trees = len([i for i in row if i.Class == 'tree'])
+        n_pillars = len([i for i in row if i.Class == 'pillar'])
+
+        print(f"Row {row_num} has {n_trees} trees and {n_pillars} pillars")
+
+    def print_overview(self):
+        for row_num in self._rows.keys():
+            self.get_row(row_num)
+
+    def to_json(self):
+        result = []
+        result.append(self.model_dump())
+        for row_num in self._rows.keys():
+            result.extend([i.model_dump() for i in self._rows[row_num]])
+        return(result)
 
 def _group_by_row(json, entryname):
     data_by_row = defaultdict(list)
@@ -60,94 +120,37 @@ def create_naturamon_json(
     if parcel_pillars is not None:
         pillars_by_row = _group_by_row(parcel_pillars, reihennummer_name)
 
-    # Initialize the result list with the parcel
-    current_timestamp = int(datetime.now().timestamp() * 1000)
-    created_date = datetime.now().strftime("%Y-%m-%dT")
-    result = []
+    # Initialize Parcel
+    parcel = Entity(
+        ID=parcel_id,
+        Class="parcel",
+        Number=0,
+        ClassNumber=1,
+        ParentID=None,
+        BaseID=None,
+        Name=parcel_name,
+    )
 
-    # Add parcel (base object)
-    base_id = parcel_id
-    result.append({
-        "ID": base_id,
-        "Class": "parcel",
-        "Number": 0,
-        "ClassNumber": 1,
-        "ParentID": None,
-        "BaseID": None,
-        "Name": parcel_name,
-        "PrevObjDistance": 0.0,
-        "Coordinates": None,
-        "IsAnchor": 0,
-        "Created": f"{created_date}T06:51:10",
-        "LastModified": current_timestamp,
-        "Deleted": 0
-    })
-
-    # Generate row and tree objects
-    current_id = base_id + 1
-
-    # First, create all rows
     for row_num in sorted(trees_by_row.keys()):
-        result.append({
-            "ID": current_id,
-            "Class": "row",
-            "Number": row_num,
-            "ClassNumber": 0,
-            "ParentID": base_id,
-            "BaseID": base_id,
-            "Name": None,
-            "PrevObjDistance": 0.0,
-            "Coordinates": None,
-            "IsAnchor": 0,
-            "Created": f"{created_date}T06:51:10",
-            "LastModified": current_timestamp,
-            "Deleted": 0
-        })
-        row_id = current_id
-        current_id += 1
+        # Add rows
+        parcel.add_row(row_num)
 
-        # Add trees for this row
-        for tree in sorted(trees_by_row[row_num], key=lambda x: x['properties'][baumnummer_name]):
-            coords = tree['geometry']['coordinates']
-            result.append({
-                "ID": current_id,
-                "Class": "tree",
-                "Number": tree['properties'][baumnummer_name],
-                "ClassNumber": tree['properties'][baumnummer_name],
-                "ParentID": row_id,
-                "BaseID": base_id,
-                "Name": None,
-                "PrevObjDistance": 0.0,
-                "Coordinates": f"POINT({coords[0]} {coords[1]})",
-                "IsAnchor": 1 if tree['properties'][baumnummer_name] == 1 else 0,
-                "Created": f"{created_date}T06:51:10",
-                "LastModified": current_timestamp,
-                "Deleted": 0
-            })
-            current_id += 1
+        # Add trees
+        parcel.add_points(
+            sorted(trees_by_row[row_num], key=lambda x: x['properties'][baumnummer_name]),
+            row_num = row_num,
+            num_name = baumnummer_name,
+            class_name = 'tree')
 
-        #Add pillars for this row
+        #Add pillars
         if pillars_by_row is not None:
-            for pillar in sorted(pillars_by_row[row_num], key=lambda x: x['properties'][säulennummer_name]):
-                coords = pillar['geometry']['coordinates']
-                result.append({
-                    "ID": current_id,
-                    "Class": "pillar",
-                    "Number": pillar['properties'][säulennummer_name],
-                    "ClassNumber": pillar['properties'][säulennummer_name],
-                    "ParentID": row_id,
-                    "BaseID": base_id,
-                    "Name": None,
-                    "PrevObjDistance": 0.0,
-                    "Coordinates": f"POINT({coords[0]} {coords[1]})",
-                    "IsAnchor": 0,
-                    "Created": f"{created_date}T06:51:10",
-                    "LastModified": current_timestamp,
-                    "Deleted": 0
-                })
-            current_id += 1
+            parcel.add_points(
+                sorted(pillars_by_row[row_num], key=lambda x: x['properties'][säulennummer_name]),
+                row_num = row_num,
+                num_name = säulennummer_name,
+                class_name = 'pillar')
 
-    return result
+    return parcel.to_json()
 
 
 # # Save the result
