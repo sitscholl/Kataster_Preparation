@@ -9,6 +9,7 @@ def create_naturamon_json(
     reihennummer_name: str,
     baumnummer_name: str,
     pillars_data = None,
+    säulennummer_name: str = None
 ):
     """
     Script to transform GeoJSON tree data into a JSON structure suitable for database insertion in naturamon.
@@ -23,6 +24,12 @@ def create_naturamon_json(
     for feature in baum_data['features']:
         row_num = feature['properties'][reihennummer_name]
         trees_by_row[row_num].append(feature)
+
+    if pillars_data:
+        pillars_by_row = defaultdict(list)
+        for feature in pillars_data['features']:
+            pillar_num= feature['properties']['säulennummer_name']
+            pillars_by_row[pillar_num].append(feature)
 
     # Initialize the result list with the parcel
     current_timestamp = int(datetime.now().timestamp() * 1000)
@@ -84,6 +91,25 @@ def create_naturamon_json(
                 "PrevObjDistance": 0.0,
                 "Coordinates": f"POINT({coords[0]} {coords[1]})",
                 "IsAnchor": 1 if tree['properties'][baumnummer_name] == 1 else 0,
+                "Created": f"{created_date}T06:51:10",
+                "LastModified": current_timestamp,
+                "Deleted": 0
+            })
+
+        #Add pillars for this row
+        for pillar in sorted(pillars_by_row[row_num], key=lambda x: x['properties'][säulennummer_name]):
+            coords = pillar['geometry']['coordinates']
+            result.append({
+                "ID": current_id,
+                "Class": "pillar",
+                "Number": pillar['properties'][säulennummer_name],
+                "ClassNumber": pillar['properties'][säulennummer_name],
+                "ParentID": row_id,
+                "BaseID": base_id,
+                "Name": None,
+                "PrevObjDistance": 0.0,
+                "Coordinates": f"POINT({coords[0]} {coords[1]})",
+                "IsAnchor": 0,
                 "Created": f"{created_date}T06:51:10",
                 "LastModified": current_timestamp,
                 "Deleted": 0
