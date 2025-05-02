@@ -6,7 +6,7 @@ from typing import ClassVar
 from pydantic import BaseModel
 
 class Entity(BaseModel):
-    _counter: ClassVar[int] = 0  # Class variable to keep track of IDs
+    _counter: ClassVar[int] = 1  # Class variable to keep track of IDs
 
     ID: int
     Class: str
@@ -95,7 +95,6 @@ def _to_json(gdf):
 
 def create_naturamon_json(
     parcel_trees: GeoDataFrame,
-    parcel_id: int,
     parcel_name: str,
     reihennummer_name: str,
     baumnummer_name: str,
@@ -122,7 +121,7 @@ def create_naturamon_json(
 
     # Initialize Parcel
     parcel = Entity(
-        ID=parcel_id,
+        ID=1,
         Class="parcel",
         Number=0,
         ClassNumber=1,

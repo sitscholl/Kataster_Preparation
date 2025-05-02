@@ -17,7 +17,6 @@ loader = DataLoader(in_data = config['naturamon']['in_data'], config = config)
 loader.load_layer('bäume')
 loader.load_layer('gerüst')
 
-parcel_id = 1
 for parcel_name, parcel_trees in loader.join_layers['bäume'].groupby(wiese_name):
 
     parcel_pillars = loader.join_layers['gerüst']
@@ -32,7 +31,6 @@ for parcel_name, parcel_trees in loader.join_layers['bäume'].groupby(wiese_name
 
     naturamon_json = create_naturamon_json(
         parcel_trees,
-        parcel_id,
         parcel_name,
         reihennummer_name = config['reihennummer_name'],
         baumnummer_name = config['baumnummer_name'],
@@ -46,5 +44,4 @@ for parcel_name, parcel_trees in loader.join_layers['bäume'].groupby(wiese_name
     with open(json_path, 'w') as f:
         json.dump(naturamon_json, f, indent=2)
     logger.info(f"Transformation completed. File saved as {json_path}")
-
-    parcel_id += 1
+    
