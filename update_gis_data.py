@@ -6,7 +6,7 @@ import yaml
 from src.loader import DataLoader
 from src.utils import join_with_base_layer, number_entities
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
 
 with open("config.yaml", "r", encoding = 'utf-8') as f:
