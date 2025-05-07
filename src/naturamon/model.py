@@ -30,6 +30,10 @@ class Entity(BaseModel):
             data['ID'] = Entity._counter
         super().__init__(**data)
 
+    @classmethod
+    def reset_counter(self):
+        Entity._counter = 0
+
     def add_row(self, row_num):
         self._rows[row_num].append(
             Entity(
@@ -112,6 +116,7 @@ def create_naturamon_json(
     trees_by_row = _group_by_row(entities_json, "ParentID")
 
     # Initialize Parcel
+    Entity.reset_counter()
     parcel = Entity(
         ID=1,
         Class="parcel",
