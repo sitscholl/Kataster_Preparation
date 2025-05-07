@@ -26,4 +26,6 @@ layers:
 
 naturamon:
   in_data: '../Wiesen_test.gpkg'
+  bäume_layer: Baeume
+  gerüst_layer: Geruest
   out_data: ../Naturamon/

@@ -1,10 +1,15 @@
 import logging
 from pathlib import Path
 import json
+
+import pandas as pd
+import geopandas as gpd
+import numpy as np
 import yaml
 
-from src.loader import DataLoader
-from src.naturamon import create_naturamon_json
+from src.naturamon.model import create_naturamon_json
+from src.naturamon.data import load_layer
+from src.utils import number_entities
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
@@ -13,29 +18,28 @@ with open("config.yaml", "r", encoding = 'utf-8') as f:
     config = yaml.safe_load(f)
 wiese_name = config['wiesen_name']
 
-loader = DataLoader(in_data = config['naturamon']['in_data'], config = config)
-loader.load_layer('bäume')
-loader.load_layer('gerüst')
+gdf_bäume = load_layer(config['naturamon']['in_data'], layer = config['naturamon']['bäume_layer'], layer_type = 'bäume')
+gdf_gerüst = load_layer(config['naturamon']['in_data'], layer = config['naturamon']['gerüst_layer'], layer_type='gerüst')
+gdf = pd.concat([gdf_bäume, gdf_gerüst]).dropna(subset = "Wiese")
 
-for parcel_name, parcel_trees in loader.join_layers['bäume'].groupby(wiese_name):
+gdf['Number'] = np.nan
+numbered_gdf = number_entities(gdf, 'Number', ['Wiese', 'ParentID'])
 
-    parcel_pillars = loader.join_layers['gerüst']
-    parcel_pillars = parcel_pillars.loc[parcel_pillars[wiese_name] == parcel_name].dropna(subset = config['säulennummer_name'])
+for parcel_name, entities in numbered_gdf.groupby(wiese_name):
 
-    if parcel_trees[config['reihennummer_name']].isna().any():
-        logger.warning(f"Missing values in column {config['reihennummer_name']} for parcel {parcel_name}. Json generation is skipped")
-        continue
-    if parcel_trees[config['baumnummer_name']].isna().any():
-        logger.warning(f"Missing values in column {config['baumnummer_name']} for parcel {parcel_name}. Json generation is skipped")
+    missing_vals = False
+    for col in ['ParentID', 'Number', 'ClassNumber']:
+        if entities[col].isna().any():
+            logger.warning(f"Missing values in column {col} for parcel {parcel_name}. Json generation is skipped")
+            missing_vals = True
+            break
+
+    if missing_vals:
         continue
 
     naturamon_json = create_naturamon_json(
-        parcel_trees,
+        entities,
         parcel_name,
-        reihennummer_name = config['reihennummer_name'],
-        baumnummer_name = config['baumnummer_name'],
-        parcel_pillars = parcel_pillars,
-        säulennummer_name=config['säulennummer_name']
     )
 
     # Save the result

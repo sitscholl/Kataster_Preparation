@@ -41,7 +41,7 @@ class Entity(BaseModel):
             )
         )
 
-    def add_points(self, points, row_num, num_name, class_name):
+    def add_points(self, points, row_num):
         if row_num not in self._rows.keys():
             raise ValueError("Row number not found in _rows. Initialize row first before adding trees.")
 
@@ -49,13 +49,13 @@ class Entity(BaseModel):
             coords = feature['geometry']['coordinates']
             self._rows[row_num].append(
                 Entity(
-                    Class=class_name,
-                    Number=feature['properties'][num_name],
-                    ClassNumber=feature['properties'][num_name],
+                    Class=feature['properties']['ClassName'],
+                    Number=feature['properties']["Number"],
+                    ClassNumber=feature['properties']["ClassNumber"],
                     ParentID=row_num,
                     BaseID=self.ID,
                     Coordinates=f"POINT({coords[0]} {coords[1]})",
-                    IsAnchor=1 if feature['properties'][num_name] == 1 else 0
+                    IsAnchor=1 if feature['properties']["Number"] == 1 else 0
                 )
             )
 
@@ -94,13 +94,9 @@ def _to_json(gdf):
     ))
 
 def create_naturamon_json(
-    parcel_trees: GeoDataFrame,
-    parcel_name: str,
-    reihennummer_name: str,
-    baumnummer_name: str,
-    parcel_pillars: GeoDataFrame | None = None,
-    säulennummer_name: str = None
-):
+    entities: GeoDataFrame,
+    parcel_name: str
+    ):
     """
     Script to transform GeoJSON tree data into a JSON structure suitable for database insertion in naturamon.
     The GeoJSON tree data needs to correspond to a point layer, where each point represents a tree and has the
@@ -109,15 +105,10 @@ def create_naturamon_json(
     otherwise the output coordinates will not be suitable for database insertion.
     """
 
-    parcel_trees = _to_json(parcel_trees)
-    if parcel_pillars is not None:
-        parcel_pillars = _to_json(parcel_pillars)
+    entities_json = _to_json(entities)
 
     # Group entities by row number
-    trees_by_row = _group_by_row(parcel_trees, reihennummer_name)
-    pillars_by_row = None
-    if parcel_pillars is not None:
-        pillars_by_row = _group_by_row(parcel_pillars, reihennummer_name)
+    trees_by_row = _group_by_row(entities_json, "ParentID")
 
     # Initialize Parcel
     parcel = Entity(
@@ -134,20 +125,11 @@ def create_naturamon_json(
         # Add rows
         parcel.add_row(row_num)
 
-        # Add trees
+        # Add trees/pillars to row
         parcel.add_points(
-            sorted(trees_by_row[row_num], key=lambda x: x['properties'][baumnummer_name]),
-            row_num = row_num,
-            num_name = baumnummer_name,
-            class_name = 'tree')
-
-        #Add pillars
-        if pillars_by_row is not None:
-            parcel.add_points(
-                sorted(pillars_by_row[row_num], key=lambda x: x['properties'][säulennummer_name]),
-                row_num = row_num,
-                num_name = säulennummer_name,
-                class_name = 'pillar')
+            sorted(trees_by_row[row_num], key=lambda x: x['properties']["Number"]),
+            row_num = row_num
+            )
 
     return parcel.to_json()
 
