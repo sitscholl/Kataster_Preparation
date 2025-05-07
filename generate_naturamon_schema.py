@@ -3,7 +3,6 @@ from pathlib import Path
 import json
 
 import pandas as pd
-import geopandas as gpd
 import numpy as np
 import yaml
 

@@ -6,7 +6,7 @@ from typing import ClassVar
 from pydantic import BaseModel
 
 class Entity(BaseModel):
-    _counter: ClassVar[int] = 1  # Class variable to keep track of IDs
+    _counter: ClassVar[int] = 0  # Class variable to keep track of IDs
 
     ID: int
     Class: str
@@ -18,7 +18,7 @@ class Entity(BaseModel):
     PrevObjDistance: float = 0.0
     Coordinates: str | None = None
     IsAnchor: int = 0
-    Created: str = datetime.now().strftime("%Y-%m-%dTT%H:%M:%S")
+    Created: str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     LastModified: float = int(datetime.now().timestamp() * 1000)
     Deleted: int = 0
 
@@ -45,6 +45,7 @@ class Entity(BaseModel):
         if row_num not in self._rows.keys():
             raise ValueError("Row number not found in _rows. Initialize row first before adding trees.")
 
+        row_id = self._rows[row_num][0].ID
         for feature in points:
             coords = feature['geometry']['coordinates']
             self._rows[row_num].append(
@@ -52,7 +53,7 @@ class Entity(BaseModel):
                     Class=feature['properties']['ClassName'],
                     Number=feature['properties']["Number"],
                     ClassNumber=feature['properties']["ClassNumber"],
-                    ParentID=row_num,
+                    ParentID=row_id,
                     BaseID=self.ID,
                     Coordinates=f"POINT({coords[0]} {coords[1]})",
                     IsAnchor=1 if feature['properties']["Number"] == 1 else 0
