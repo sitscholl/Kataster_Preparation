@@ -1,5 +1,5 @@
 in_data: '../Wiesen.gpkg'
-out_data: '../Wiesen_test.gpkg' #put same path as in_data and overwrite to true to update existing layers
+out_data: '../Wiesen.gpkg' #put same path as in_data and overwrite to true to update existing layers
 overwrite: true
 max_join_distance: 1
 

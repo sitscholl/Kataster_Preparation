@@ -32,7 +32,7 @@ def join_with_base_layer(join_layer, base_layer, wiesen_name, reihennummer_name,
 
     return joined_layer
 
-def number_entities(layer, entity_name, group_by_column):
+def number_entities(layer, entity_name, group_by_column, class_column):
     """Number entities from south to north within each group."""
 
     numbered_layer = layer.copy()
@@ -40,8 +40,19 @@ def number_entities(layer, entity_name, group_by_column):
         layer[entity_name] = np.nan
         logger.warning(f"Added column {entity_name} to layer")
 
+    # Create mask for non-Anker points
+    non_anker_mask = numbered_layer[class_column] != 'Anker'
+
     numbered_layer['y_coord'] = numbered_layer.geometry.y
-    numbered_layer[f"_{entity_name}"] = numbered_layer.groupby(group_by_column)['y_coord'].rank(method='first', ascending=True)
+
+    # Apply ranking only to non-Anker points
+    numbered_layer[f"_{entity_name}"] = np.nan  # Initialize with NaN
+    numbered_layer.loc[non_anker_mask, f"_{entity_name}"] = (
+        numbered_layer[non_anker_mask]
+        .groupby(group_by_column)['y_coord']
+        .rank(method='first', ascending=True)
+    )
+    
     numbered_layer = numbered_layer.drop(columns=['y_coord'])
 
     numbered_layer[entity_name] = numbered_layer[entity_name].fillna(

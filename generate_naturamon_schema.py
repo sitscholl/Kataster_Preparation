@@ -25,7 +25,12 @@ if not config['count_name'] in gdf.columns:
     gdf[config['count_name']] = np.nan
     logger.warning(f"Added column {config['count_name']} to layer")
 
-numbered_gdf = number_entities(gdf, config['count_name'], [config['wiesen_name'], config['parent_name']])
+numbered_gdf = number_entities(
+    gdf,
+    config["count_name"],
+    [config["wiesen_name"], config["parent_name"]],
+    class_column=config["class_name"],
+)
 
 for parcel_name, entities in numbered_gdf.groupby(wiese_name):
 
@@ -51,4 +56,3 @@ for parcel_name, entities in numbered_gdf.groupby(wiese_name):
     with open(json_path, 'w') as f:
         json.dump(naturamon_json, f, indent=2)
     logger.info(f"Transformation completed. File saved as {json_path}")
-    

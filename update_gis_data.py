@@ -34,7 +34,12 @@ for nam, join_layer in loader.join_layers.items():
     )
 
     ## --- 2. Number Bäume/Säulen from south to north in join_layer ---
-    numbered_layer = number_entities(joined_layer, config['class_count_name'], group_by_column = [wiese_name, parent_name])
+    numbered_layer = number_entities(
+        joined_layer,
+        config["class_count_name"],
+        group_by_column=[wiese_name, parent_name],
+        class_column = config['class_name']
+    )
 
     ## --- 3. Save output ---
     layer_nam = config['layers'][nam]['layer_name']
