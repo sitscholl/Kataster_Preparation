@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from src.loader import DataLoader
+from src.gis.loader import DataLoader
 from src.utils import join_with_base_layer, number_entities
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt='%H:%M:%S')
@@ -18,24 +18,25 @@ loader.load_all()
 base_layer = loader.base_layer
 
 for nam, join_layer in loader.join_layers.items():
+    logger.info(f"Processing layer {nam}")
 
     ## --- 1. Join Reihennummer to join_layer ---
-    reihe_name = config['reihennummer_name']
+    reihennummer_name = config['count_name']
     wiese_name = config['wiesen_name']
+    parent_name = config['parent_name']
     joined_layer = join_with_base_layer(
         join_layer,
         base_layer,
         wiese_name,
-        reihe_name,
+        reihennummer_name,
+        parent_name,
         config["max_join_distance"],
     )
-    logging.info(f"Added numbering to {reihe_name} in {nam}")
 
     ## --- 2. Number Bäume/Säulen from south to north in join_layer ---
-    entity_name = [i for i in [config['baumnummer_name'], config['säulennummer_name']] if i in joined_layer.columns][0]
-    numbered_layer = number_entities(joined_layer, entity_name, group_by_column = [wiese_name, reihe_name])
-    logging.info(f"Numbered {entity_name} in {nam}")
+    numbered_layer = number_entities(joined_layer, config['class_count_name'], group_by_column = [wiese_name, parent_name])
 
+    ## --- 3. Save output ---
     layer_nam = config['layers'][nam]['layer_name']
     out_path = config['out_data']
     if not Path(out_path).exists():

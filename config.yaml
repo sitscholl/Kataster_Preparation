@@ -3,26 +3,24 @@ out_data: '../Wiesen_test.gpkg' #put same path as in_data and overwrite to true 
 overwrite: true
 max_join_distance: 1
 
-reihennummer_name: Reihe
+count_name: Number
+class_count_name: ClassNumber
+parent_name: ParentID
 wiesen_name: Wiese
-baumnummer_name: Baum
-säulennummer_name: Säule
+class_name: Class
 
 layers:
   fruchtdraht:
     layer_name: Fruchtdraht #the name of the layer in the geopackage
     type: base_layer
-    required_columns: ['reihennummer_name', wiesen_name] #list of required columns. Use the keys here, column names are specified using the same key below
 
   gerüst:
     layer_name: Geruest
     type: join_layer
-    required_columns: ['reihennummer_name', 'säulennummer_name']
 
   bäume:
     layer_name: Baeume
     type: join_layer
-    required_columns: ['reihennummer_name', 'baumnummer_name']
 
 naturamon:
   in_data: '../Wiesen_test.gpkg'

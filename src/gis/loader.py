@@ -3,7 +3,7 @@ import logging
 
 import geopandas as gpd
 
-from .geometry_checks import convert_multipoint_to_point
+from ..geometry_checks import convert_multipoint_to_point
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +14,20 @@ class DataLoader:
         self.base_layer = None
         self.join_layers = {}
 
-    def _add_missing_columns(self, gdf, required_columns, layer_name):
-        """Add missing columns to the GeoDataFrame with NaN values."""
-        for column_config_key in required_columns:
-            column_name = self.config[column_config_key]
-            if column_name not in gdf:
-                gdf[column_name] = np.nan
-                logger.info(f'Added column {column_name} to {layer_name}')
-        return gdf
+    def validate(self, gdf, layer_type):
+        """Validate the geodataframe."""
+        if layer_type == 'base_layer' and not self.config['count_name'] in gdf.columns:
+            raise ValueError(f"Column {self.config['count_name']} not found in base layer.")
+        if layer_type == 'base_layer' and not self.config['wiesen_name'] in gdf.columns:
+            raise ValueError(f"Column {self.config['wiesen_name']} not found in base layer.")
+
+        if layer_type == 'join_layer' and not self.config['class_count_name'] in gdf.columns:
+            raise ValueError(f"Column {self.config['class_count_name']} not found in join layer.")
+        if layer_type == 'join_layer' and not self.config['parent_name'] in gdf.columns:
+            raise ValueError(f"Column {self.config['parent_name']} not found in join layer.")
+
+        if not self.config['class_name'] in gdf.columns:
+            raise ValueError(f"Column {self.config['class_name']} not found in layer.")
 
     def load_layer(self, key):
         """Generic method to load a single layer."""
@@ -30,11 +36,8 @@ class DataLoader:
         layer_type = layer_config['type']
 
         gdf = gpd.read_file(self.in_data, layer=layer_name)
-        gdf = self._add_missing_columns(
-            gdf,
-            layer_config['required_columns'],
-            layer_name
-        )
+        self.validate(gdf, layer_type)
+
         if layer_type != 'base_layer': #the base_layer should be of type line, so skip this
             gdf = convert_multipoint_to_point(gdf)
 
