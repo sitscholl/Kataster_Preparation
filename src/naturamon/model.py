@@ -45,7 +45,7 @@ class Entity(BaseModel):
             )
         )
 
-    def add_points(self, points, row_num):
+    def add_points(self, points, row_num, class_name = "Class", number_name = "Number", class_number_name = "ClassNumber"):
         if row_num not in self._rows.keys():
             raise ValueError("Row number not found in _rows. Initialize row first before adding trees.")
 
@@ -54,13 +54,13 @@ class Entity(BaseModel):
             coords = feature['geometry']['coordinates']
             self._rows[row_num].append(
                 Entity(
-                    Class=feature['properties']['ClassName'],
-                    Number=feature['properties']["Number"],
-                    ClassNumber=feature['properties']["ClassNumber"],
+                    Class=feature['properties'][class_name],
+                    Number=feature['properties'][number_name],
+                    ClassNumber=feature['properties'][class_number_name],
                     ParentID=row_id,
                     BaseID=self.ID,
                     Coordinates=f"POINT({coords[0]} {coords[1]})",
-                    IsAnchor=1 if feature['properties']["Number"] == 1 else 0
+                    IsAnchor=1 if feature['properties'][number_name] == 1 else 0
                 )
             )
 
@@ -100,7 +100,8 @@ def _to_json(gdf):
 
 def create_naturamon_json(
     entities: GeoDataFrame,
-    parcel_name: str
+    parcel_name: str,
+    config: dict[str, str]
     ):
     """
     Script to transform GeoJSON tree data into a JSON structure suitable for database insertion in naturamon.
@@ -133,7 +134,7 @@ def create_naturamon_json(
 
         # Add trees/pillars to row
         parcel.add_points(
-            sorted(trees_by_row[row_num], key=lambda x: x['properties']["Number"]),
+            sorted(trees_by_row[row_num], key=lambda x: x['properties'][config['count_name']]),
             row_num = row_num
             )
 

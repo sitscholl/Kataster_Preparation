@@ -17,17 +17,20 @@ with open("config.yaml", "r", encoding = 'utf-8') as f:
     config = yaml.safe_load(f)
 wiese_name = config['wiesen_name']
 
-gdf_bäume = load_layer(config['naturamon']['in_data'], layer = config['naturamon']['bäume_layer'], layer_type = 'bäume')
-gdf_gerüst = load_layer(config['naturamon']['in_data'], layer = config['naturamon']['gerüst_layer'], layer_type='gerüst')
+gdf_bäume = load_layer(config['naturamon']['in_data'], layer = config['naturamon']['bäume_layer'], layer_type = 'bäume', config = config)
+gdf_gerüst = load_layer(config['naturamon']['in_data'], layer = config['naturamon']['gerüst_layer'], layer_type='gerüst', config = config)
 gdf = pd.concat([gdf_bäume, gdf_gerüst]).dropna(subset = "Wiese")
 
-gdf['Number'] = np.nan
-numbered_gdf = number_entities(gdf, 'Number', ['Wiese', 'ParentID'])
+if not config['count_name'] in gdf.columns:
+    gdf[config['count_name']] = np.nan
+    logger.warning(f"Added column {config['count_name']} to layer")
+
+numbered_gdf = number_entities(gdf, config['count_name'], [config['wiesen_name'], config['parent_name']])
 
 for parcel_name, entities in numbered_gdf.groupby(wiese_name):
 
     missing_vals = False
-    for col in ['ParentID', 'Number', 'ClassNumber']:
+    for col in [config['parent_name'], config['count_name'], config['class_count_name']]:
         if entities[col].isna().any():
             logger.warning(f"Missing values in column {col} for parcel {parcel_name}. Json generation is skipped")
             missing_vals = True
@@ -39,6 +42,7 @@ for parcel_name, entities in numbered_gdf.groupby(wiese_name):
     naturamon_json = create_naturamon_json(
         entities,
         parcel_name,
+        config
     )
 
     # Save the result
